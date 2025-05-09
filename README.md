@@ -140,4 +140,4 @@ Go to the Bigquery table (summaries) and check if the information is there.
 
 ### Cheat Sheet 🃏
 
-The `deploy.txt` file contains all the gcloud commands used on this challenge. Note that you need to change the environment variables to yours before run. This can be executed on Cloud Shell 
+The `deploy.sh` file contains all the gcloud commands used on this challenge. Note that you need to change the environment variables to yours before run. This can be executed on Cloud Shell 
