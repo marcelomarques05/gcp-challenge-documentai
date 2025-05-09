@@ -93,6 +93,8 @@ document_text:STRING
 document_summary:STRING
 ```
 
+---
+
 ### 10. Deploy the Cloud Function (Webhook) ☁️
 
 -	**Name**: `challenge-function-XXXX`
@@ -123,6 +125,8 @@ document_summary:STRING
 | BQ_TABLE | summaries |
 | LOG_EXECUTION_ID | true |
 
+---
+
 ### 11. Update the Cloud Function ☁️
 
 ⚠️ **NOTE**: You need to change the function entry point to `on_cloud_event`
@@ -131,12 +135,15 @@ Update the `main.py` and `requirements.txt` with the ones here in the repository
 
 Save and Redeploy
 
+---
 
 ### 12. Check on BigQuery 📊
 
 Go to the Bigquery table (summaries) and check if the information is there.
 
 ⚠️ **NOTE**: Depending on the size of the file, it can take some time. You can check in the GCP logging service the status.
+
+---
 
 ### Cheat Sheet 🃏
 
