@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 print_help() {
   echo "Usage: $(basename "$0") --summary-file <file>"
@@ -53,7 +54,7 @@ echo "🗑️ Starting resource deletion for project: $PROJECT_ID"
 #---------------------------#
 echo "🗑️ Deleting Cloud Function..."
 #---------------------------#
-if gcloud functions describe "$WEBHOOK_NAME" --region="$REGION" --project="$PROJECT_ID" &>/dev/null; then
+if gcloud functions describe "$WEBHOOK_NAME" --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
   gcloud functions delete "$WEBHOOK_NAME" --region="$REGION" --quiet --project="$PROJECT_ID"
   echo "   - Cloud Function $WEBHOOK_NAME deleted."
 else
@@ -64,7 +65,7 @@ echo "✅ Cloud Function deletion done."
 #---------------------------#
 echo "🗑️ Deleting Artifact Registry repository..."
 #---------------------------#
-if gcloud artifacts repositories describe "$ARTIFACT_REPO_NAME" --location="$REGION" --project="$PROJECT_ID" &>/dev/null; then
+if gcloud artifacts repositories describe "$ARTIFACT_REPO_NAME" --location="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
   gcloud artifacts repositories delete "$ARTIFACT_REPO_NAME" --location="$REGION" --quiet --project="$PROJECT_ID"
   echo "   - Artifact Registry repo $ARTIFACT_REPO_NAME deleted."
 else
@@ -76,7 +77,7 @@ echo "✅ Artifact Registry deletion done."
 echo "🗑️ Deleting GCS buckets..."
 #---------------------------#
 for BUCKET in "$MAIN_BUCKET" "$DOCS_BUCKET"; do
-  if gsutil ls -b "gs://$BUCKET" &>/dev/null; then
+  if gsutil ls -b "gs://$BUCKET" >/dev/null 2>&1; then
     gsutil -m rm -r "gs://$BUCKET"
     echo "   - Bucket $BUCKET deleted."
   else
@@ -89,16 +90,16 @@ echo "✅ GCS bucket deletion done."
 echo "🗑️ Deleting BigQuery table and dataset..."
 #---------------------------#
 # Check and delete table
-if bq show --format=prettyjson "$PROJECT_ID:$DATASET_NAME.$TABLE_NAME" &>/dev/null; then
-  bq rm -f -t "$PROJECT_ID:$DATASET_NAME.$TABLE_NAME" &>/dev/null
+if bq show --format=prettyjson "$PROJECT_ID:$DATASET_NAME.$TABLE_NAME" >/dev/null 2>&1; then
+  bq rm -f -t "$PROJECT_ID:$DATASET_NAME.$TABLE_NAME" >/dev/null 2>&1
   echo "   - Table $TABLE_NAME deleted."
 else
   echo "   - Table $TABLE_NAME does not exist, skipping."
 fi
 
 # Check and delete dataset
-if bq show --format=prettyjson "$PROJECT_ID:$DATASET_NAME" &>/dev/null; then
-  bq rm -f -d "$PROJECT_ID:$DATASET_NAME" &>/dev/null
+if bq show --format=prettyjson "$PROJECT_ID:$DATASET_NAME" >/dev/null 2>&1; then
+  bq rm -f -d "$PROJECT_ID:$DATASET_NAME" >/dev/null 2>&1
   echo "   - Dataset $DATASET_NAME deleted."
 else
   echo "   - Dataset $DATASET_NAME does not exist, skipping."
@@ -114,7 +115,7 @@ if [[ -n "$OCR_PROCESSOR_ID" ]]; then
   if [[ "$PROC_STATUS" != *"notFound"* ]]; then
     curl -s -X DELETE \
       -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-      "https://${LOCATION}-documentai.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/processors/${OCR_PROCESSOR_ID}" &>/dev/null
+      "https://${LOCATION}-documentai.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/processors/${OCR_PROCESSOR_ID}" >/dev/null 2>&1
     echo "   - Document AI Processor $OCR_PROCESSOR_ID deleted."
   else
     echo "   - Document AI Processor $OCR_PROCESSOR_ID does not exist, skipping."
@@ -128,7 +129,7 @@ echo "✅ Document AI Processor deletion done."
 echo "🗑️ Deleting service accounts..."
 #---------------------------#
 for SA in "$WEBHOOK_SA" "$TRIGGER_SA"; do
-  if [[ -n "$SA" ]] && gcloud iam service-accounts describe "$SA" --project="$PROJECT_ID" &>/dev/null; then
+  if [[ -n "$SA" ]] && gcloud iam service-accounts describe "$SA" --project="$PROJECT_ID" >/dev/null 2>&1; then
     gcloud iam service-accounts delete "$SA" --quiet --project="$PROJECT_ID"
     echo "   - Service account $SA deleted."
   else

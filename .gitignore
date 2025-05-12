@@ -136,3 +136,6 @@ test_output/
 
 scripts/.suffix_id
 scripts/resources-*.txt
+
+# Virtual environment
+venv/

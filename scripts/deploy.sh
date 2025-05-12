@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 print_help() {
   cat <<EOF
@@ -9,7 +10,7 @@ Usage: $(basename "$0") [OPTIONS]
 Google Cloud resource bootstrap script.
 
 Options:
-  --project_id <ID>    GCP Project ID
+  --project <ID>       GCP Project ID
   --region <REGION>    GCP region (default: us-central1)
   --location <LOC>     Resources location (default: us)
   --suffix <SUFFIX>    4-char resource suffix (optional)
@@ -23,7 +24,7 @@ EOF
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --project_id)
+    --project)
       PROJECT_ID="$2"
       shift 2
       ;;
@@ -64,15 +65,13 @@ validate_env() {
     exit 1
   fi
 
-  # REGION
-  if [ -z "${REGION:-}" ]; then
-    read -rp "Enter your region (us-central1): " REGION
-    REGION="${REGION:-us-central1}"
-  fi
-  if ! gcloud functions regions list --format="value(name)" | awk -F/ '{print $4}' | grep -qx "$REGION"; then
-    echo "❌ REGION '$REGION' is not valid for Cloud Functions."
-    exit 1
-  fi
+  ## REGION
+if [ -z "${REGION:-}" ]; then
+  read -rp "Enter your region (us-central1): " REGION
+  REGION="${REGION:-us-central1}"
+fi
+# Optionally: Warn user, but don't fail
+echo "➡️  Using region: $REGION (ensure this is valid for your resource type and project)"
 
   # LOCATION
   if [ -z "${LOCATION:-}" ]; then
@@ -89,7 +88,7 @@ validate_env() {
 }
 
 # Suffix logic
-SUFFIX_FILE=".suffix_id"
+SUFFIX_FILE="${SCRIPT_DIR}/.suffix_id"
 if [ -z "${SUFFIX_ID:-}" ]; then
   if [ -f "$SUFFIX_FILE" ]; then
     SUFFIX_ID=$(cat "$SUFFIX_FILE")
@@ -144,7 +143,7 @@ echo "✅ GCP services enabled."
 echo "🚀 Creating buckets..."
 #---------------------------#
 for BUCKET in "$MAIN_BUCKET" "$DOCS_BUCKET"; do
-  if gsutil ls -b "gs://$BUCKET"; then
+  if gsutil ls -b "gs://$BUCKET" >/dev/null 2>&1; then
     echo "   - Bucket $BUCKET already exists, skipping."
   else
     gsutil mb -p "$PROJECT_ID" -c STANDARD -l "$REGION" -b on "gs://$BUCKET"
@@ -156,7 +155,7 @@ echo "✅ Buckets created."
 #---------------------------#
 echo "🚀 Creating Artifact Registry repository..."
 #---------------------------#
-if gcloud artifacts repositories describe "$ARTIFACT_REPO_NAME" --location="$REGION" --project="$PROJECT_ID"; then
+if gcloud artifacts repositories describe "$ARTIFACT_REPO_NAME" --location="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
   echo "   - Artifact Registry repo $ARTIFACT_REPO_NAME already exists, skipping."
 else
   gcloud artifacts repositories create "$ARTIFACT_REPO_NAME" \
@@ -172,7 +171,7 @@ echo "✅ Artifact Registry repository ready."
 echo "🚀 Creating service accounts..."
 #---------------------------#
 for SA in "$WEBHOOK_SA_NAME" "$TRIGGER_SA_NAME"; do
-  if gcloud iam service-accounts describe "$SA@$PROJECT_ID.iam.gserviceaccount.com" --project="$PROJECT_ID"; then
+  if gcloud iam service-accounts describe "$SA@$PROJECT_ID.iam.gserviceaccount.com" --project="$PROJECT_ID" >/dev/null 2>&1; then
     echo "   - Service account $SA already exists, skipping."
   else
     gcloud iam service-accounts create "$SA" \
@@ -189,27 +188,27 @@ echo "🚀 Assigning IAM roles..."
 #---------------------------#
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$WEBHOOK_SA_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/aiplatform.serviceAgent" --quiet &>/dev/null
+  --role="roles/aiplatform.serviceAgent" --quiet >/dev/null 2>&1
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$WEBHOOK_SA_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/bigquery.dataEditor" --quiet &>/dev/null
+  --role="roles/bigquery.dataEditor" --quiet >/dev/null 2>&1
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$WEBHOOK_SA_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/documentai.admin" --quiet &>/dev/null
+  --role="roles/documentai.admin" --quiet >/dev/null 2>&1
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$TRIGGER_SA_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/eventarc.eventReceiver" --quiet &>/dev/null
+  --role="roles/eventarc.eventReceiver" --quiet >/dev/null 2>&1
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$TRIGGER_SA_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/run.invoker" --quiet &>/dev/null
+  --role="roles/run.invoker" --quiet >/dev/null 2>&1
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$GCS_SA" \
-  --role="roles/pubsub.publisher" --quiet &>/dev/null
+  --role="roles/pubsub.publisher" --quiet >/dev/null 2>&1
 
 gcloud beta services identity create \
   --service=eventarc.googleapis.com \
@@ -217,7 +216,7 @@ gcloud beta services identity create \
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:service-$PROJECT_NUMBER@gcp-sa-eventarc.iam.gserviceaccount.com" \
-  --role="roles/eventarc.serviceAgent" --quiet &>/dev/null
+  --role="roles/eventarc.serviceAgent" --quiet >/dev/null 2>&1
 
 echo "✅ IAM roles assigned."
 
@@ -242,20 +241,24 @@ else
     | jq -r '.name' | awk -F/ '{print $6}')
   echo "   - Document AI processor $OCR_PROCESSOR_NAME created."
 fi
+if [[ -z "$OCR_PROCESSOR_ID" || "$OCR_PROCESSOR_ID" == "null" ]]; then
+  echo "❌ Failed to create Document AI processor."
+  exit 1
+fi
 export OCR_PROCESSOR_ID
 echo "✅ Document AI processor ready."
 
 #---------------------------#
 echo "🚀 Creating BigQuery dataset and table..."
 #---------------------------#
-if bq --project_id="$PROJECT_ID" show --dataset "$DATASET_NAME"; then
+if bq show "$PROJECT_ID:$DATASET_NAME"; then
   echo "   - Dataset $DATASET_NAME already exists, skipping."
 else
-  bq --project_id="$PROJECT_ID" mk --dataset "$DATASET_NAME"
+  bq mk --dataset "$PROJECT_ID:$DATASET_NAME"
   echo "   - Dataset $DATASET_NAME created."
 fi
 
-if bq --project_id="$PROJECT_ID" show --table "$DATASET_NAME.$TABLE_NAME" &>/dev/null; then
+if bq show "$PROJECT_ID:$DATASET_NAME.$TABLE_NAME" >/dev/null 2>&1; then
   echo "   - Table $TABLE_NAME already exists, skipping."
 else
   bq --project_id="$PROJECT_ID" query --use_legacy_sql=false --quiet \
@@ -273,19 +276,19 @@ fi
 #---------------------------#
 echo "🚀 Uploading Cloud Function code..."
 #---------------------------#
-if [ ! -d ../backend ]; then
+if [ ! -d ${SCRIPT_DIR}/../backend ]; then
   echo "❌ Directory ../backend does not exist!"
   exit 1
 fi
-zip -jqr webhook_staging.zip ../backend/main.py ../backend/requirements.txt
-gsutil cp webhook_staging.zip "gs://$MAIN_BUCKET/webhook_staging.zip"
-rm -f webhook_staging.zip
+zip -jqr ${SCRIPT_DIR}/webhook_staging.zip ${SCRIPT_DIR}/../backend/main.py ${SCRIPT_DIR}/../backend/requirements.txt
+gsutil cp ${SCRIPT_DIR}/webhook_staging.zip "gs://$MAIN_BUCKET/webhook_staging.zip"
+rm -f ${SCRIPT_DIR}/webhook_staging.zip
 echo "✅ Cloud Function code uploaded."
 
 #---------------------------#
 echo "🚀 Deploying Cloud Function..."
 #---------------------------#
-if gcloud functions describe "$WEBHOOK_NAME" --region="$REGION" --project="$PROJECT_ID" &>/dev/null; then
+if gcloud functions describe "$WEBHOOK_NAME" --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
   echo "   - Cloud Function $WEBHOOK_NAME already exists, skipping deployment."
 else
   gcloud functions deploy "$WEBHOOK_NAME" \
@@ -309,7 +312,8 @@ fi
 echo "✅ Cloud Function ready."
 
 #---------------------------#
-RESOURCE_SUMMARY_FILE="resources-${SUFFIX_ID}.txt"
+
+RESOURCE_SUMMARY_FILE="${SCRIPT_DIR}/resources-${SUFFIX_ID}.txt"
 echo "📦 Writing resource summary to $RESOURCE_SUMMARY_FILE..."
 
 cat <<EOF > "$RESOURCE_SUMMARY_FILE"
@@ -344,6 +348,8 @@ Cloud Function:
 
 Trigger:
   - Name: $TRIGGER_NAME
+
 EOF
 
 echo "✅ Resource summary written to: $RESOURCE_SUMMARY_FILE"
+echo "🎉 All resources created successfully."
