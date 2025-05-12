@@ -32,9 +32,11 @@ def upload_file():
         file_ext = os.path.splitext(filename)[1]
         if file_ext not in app.config['UPLOAD_EXTENSIONS']:
             return "Invalid file type", 400
-            
+
         blob = bucket.blob(filename)
-        blob.upload_from_file(uploaded_file)
+        # Set the correct content type
+        content_type = uploaded_file.content_type or 'application/pdf'
+        blob.upload_from_file(uploaded_file, content_type=content_type)
         
     return redirect('/results')
 
