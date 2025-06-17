@@ -85,11 +85,11 @@ _🧠 Pro Tip: Paste this in "Edit as text" mode for the schema:_
 
 **Schema**:
 ```text
-event_id:STRING  
-time_uploaded:TIMESTAMP  
-time_processed:TIMESTAMP  
-document_path:STRING  
-document_text:STRING  
+event_id:STRING,
+time_uploaded:TIMESTAMP,
+time_processed:TIMESTAMP,
+document_path:STRING,
+document_text:STRING,
 document_summary:STRING
 ```
 
@@ -109,17 +109,24 @@ document_summary:STRING
 
   * **Event Type**: `google.cloud.storage.object.v1.finalized`
 
-  * **Bucket**: Select the trigger bucket you created (challenge-trigger-XXXX)
+  * **Bucket**: Select the main bucket you created (challenge-main-XXXX)
 
   * **Service Account**: Use the Trigger Service Account _(⚠️ If prompted to grant Pub/Sub a role — click “Grant”)_
-- **Environment Variables**
+
+
+- **Container Configuration**
+  * **Go to the Container Section**: Container(s),volumes, networks and security section.
+  
+  * **Container Service Account**: Inside the Security tab, select the Webhook Service Account you created earlier (challenge-webhook-sa-XXXX).
+  
+  * **Variables & Secrets**: Add the following environment variables:
 
 | **Variable** | **Value** |
 |---|---| 
 | PROJECT_ID | Will Be Provided During Session |
 | LOCATION | us-central1 |
-| OUTPUT_BUCKET | Your main bucket name |
-| DOCAI_PROCESSOR | Will Be Provided During Session |
+| OUTPUT_BUCKET | Your trigger bucket name |
+| DOCAI_PROCESSOR | Will Be Provided During Session (Full Path) |
 | DOCAI_LOCATION | us |
 | BQ_DATASET | Your dataset name |
 | BQ_TABLE | summaries |
@@ -131,7 +138,7 @@ document_summary:STRING
 
 ⚠️ **NOTE**: You need to change the function entry point to `on_cloud_event`
 
-Update the `main.py` and `requirements.txt` with the ones here in the repository.
+Update the `main.py` and `requirements.txt` with the ones here in the repository (Backend folder).
 
 Save and Redeploy
 
