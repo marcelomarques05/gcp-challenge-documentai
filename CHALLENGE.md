@@ -107,7 +107,7 @@ document_summary:STRING
 
   * **Provider**: Cloud Storage
 
-  * **Event Type**: `google.cloud.storage.object.v1.finalized` # storage.object.create
+  * **Event Type**: `google.cloud.storage.object.v1.finalized`
 
   * **Bucket**: Select the main bucket you created (challenge-main-XXXX)
 
