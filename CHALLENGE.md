@@ -149,6 +149,7 @@ Save and Redeploy
 You can either use the script `scripts/start_frontend.sh` to start the frontend or upload a file directly to the main bucket.
 
 ⚠️ **NOTE**: To use the script, you need to be authenticated. You can use on GCP Cloud Shell to be easy and fast.
+
 If you use the script, you will have the results page that will show the summaries of the documents.
 You can also check the BigQuery table `summaries` to see the results.
 You can run the following query to check the results:
