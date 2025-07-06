@@ -5,17 +5,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FRONTEND_DIR="${SCRIPT_DIR}/../frontend"
 VENV_DIR="${FRONTEND_DIR}/.venv"
 
-SUMMARIES_FILE=""
+SUMMARY_FILE=""
 
 usage() {
   cat <<EOF
-Usage: $0 [--summaries-file FILE] [-h|--help]
+Usage: $0 [--summary-file FILE] [-h|--help]
 
 Options:
-  --summaries-file FILE   Start frontend using the specified summaries file.
+  --summary-file FILE   Start frontend using the specified summary file.
   -h, --help             Show this help message and exit.
 
-If --summaries-file is not provided, the script checks for environment variables:
+If --summary-file is not provided, the script checks for environment variables:
   PROJECT_ID, BUCKET_NAME, DATASET_NAME, TABLE_NAME.
 If any are missing, you will be prompted to enter them.
 
@@ -27,12 +27,14 @@ EOF
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --summaries-file)
+    --summary-file)
       if [[ -z "${2-}" ]]; then
-        echo "Error: --summaries-file requires a file path argument."
+        echo "Error: --summary-file requires a file path argument."
         exit 1
       fi
-      SUMMARIES_FILE="$2"
+      SUMMARY_FILE="$2"
+      # Convert to absolute path in case working directory changes later
+      SUMMARY_FILE="$(realpath "$SUMMARY_FILE")"
       shift 2
       ;;
     -h|--help)
@@ -65,8 +67,8 @@ if ! pip show Flask &>/dev/null; then
   pip install -r requirements.txt
 fi
 
-# If no summaries file, check for required env vars or prompt
-if [[ -z "$SUMMARIES_FILE" ]]; then
+# If no summary file, check for required env vars or prompt
+if [[ -z "$SUMMARY_FILE" ]]; then
   : "${PROJECT_ID:=$(read -rp 'Enter PROJECT_ID: ' var; echo $var)}"
   : "${BUCKET_NAME:=$(read -rp 'Enter BUCKET_NAME: ' var; echo $var)}"
   : "${DATASET_NAME:=$(read -rp 'Enter DATASET_NAME: ' var; echo $var)}"
@@ -76,16 +78,40 @@ fi
 export FLASK_APP=main.py
 export FLASK_ENV=development
 
-if [[ -n "$SUMMARIES_FILE" ]]; then
-  echo "Starting frontend with summaries file: $SUMMARIES_FILE"
-  export SUMMARIES_FILE
+if [[ -n "$SUMMARY_FILE" ]]; then
+  echo "Starting frontend with summary file: $SUMMARY_FILE"
+  echo "Parsing summary file: $SUMMARY_FILE"
+  
+  # Extrair variáveis do arquivo
+  PROJECT_ID=$(grep -E "^Project ID:" "$SUMMARY_FILE" | awk -F': *' '{print $2}')
+  BUCKET_NAME=$(grep -E "^\s*-\s*challenge-main-bucket" "$SUMMARY_FILE" | awk '{print $2}' | head -n1)
+  DATASET_NAME=$(grep -E "^  - Dataset:" "$SUMMARY_FILE" | awk -F': *' '{print $2}')
+  TABLE_NAME=$(grep -E "^  - Table:" "$SUMMARY_FILE" | awk -F': *' '{print $2}')
+
+  if [[ -z "$PROJECT_ID" || -z "$BUCKET_NAME" || -z "$DATASET_NAME" || -z "$TABLE_NAME" ]]; then
+    echo "Error: Could not extract all required variables from $SUMMARY_FILE"
+    exit 1
+  fi
+
+  export PROJECT_ID BUCKET_NAME DATASET_NAME TABLE_NAME
 else
-  echo "Starting frontend with GCP variables:"
-  echo "  PROJECT_ID=$PROJECT_ID"
-  echo "  BUCKET_NAME=$BUCKET_NAME"
-  echo "  DATASET_NAME=$DATASET_NAME"
-  echo "  TABLE_NAME=$TABLE_NAME"
+  : "${PROJECT_ID:=$(read -rp 'Enter PROJECT_ID: ' var; echo $var)}"
+  : "${BUCKET_NAME:=$(read -rp 'Enter BUCKET_NAME: ' var; echo $var)}"
+  : "${DATASET_NAME:=$(read -rp 'Enter DATASET_NAME: ' var; echo $var)}"
+  : "${TABLE_NAME:=$(read -rp 'Enter TABLE_NAME: ' var; echo $var)}"
   export PROJECT_ID BUCKET_NAME DATASET_NAME TABLE_NAME
 fi
+
+# 🌟 Mostrar as variáveis configuradas
+echo
+echo "✅ Frontend will use the following configuration:"
+echo "  PROJECT_ID   = $PROJECT_ID"
+echo "  BUCKET_NAME  = $BUCKET_NAME"
+echo "  DATASET_NAME = $DATASET_NAME"
+echo "  TABLE_NAME   = $TABLE_NAME"
+echo
+
+export FLASK_APP=main.py
+export FLASK_ENV=development
 
 python3 -m flask run --host=0.0.0.0 --port=8080
