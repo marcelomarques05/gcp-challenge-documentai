@@ -12,21 +12,25 @@
 ## 🛠️ Step-by-Step Instructions
 
 ### 1. Access GCP Console 🌐
+
 <details>
   <summary>Click to view</summary>
   
   1. <p>Go to <a href="https://console.cloud.google.com" target="_blank">https://console.cloud.google.com</a></p>  
+
 </details>
 
 ---
 
 ### 2. Select the Project 🏗️
+
 <details>
   <summary>Click to view</summary>
   
   1. <p>Click on the project selector at the top of the page.</p>
-  2. <p>Select the project.</p>
-_Project ID it will be informed during the session_
+
+  2. <p>Select the project. (<i>it will be informed during the session</i>)</p>
+
 </details>
 
 ---
@@ -34,8 +38,9 @@ _Project ID it will be informed during the session_
 ### 3. Create 2 Buckets (One for the Function and one for EventArc) on Cloud Storage 🪣
 
 **Bucket names**:</p>
-  - `challenge-main-XXXX` _(for the Cloud Function)_
-  - `challenge-trigger-XXXX` _(for the EventArc)_
+
+- `challenge-main-XXXX` _(for the Cloud Function)_
+- `challenge-trigger-XXXX` _(for the EventArc)_
 
 <details>
   <summary>Click to view</summary>
@@ -45,13 +50,15 @@ _Project ID it will be informed during the session_
   3. <p>Add the name for the first bucket (<code>challenge-main-XXXX</code>)</p>
   4. <p>Click "Create at the bottom</p>
   5. <p>Repeat the process for the second bucket (<code>challenge-trigger-XXXX</code>)</p>
+
 </details>
 
 ---
 
-### 4. Create a Docker Repository in Artifact Registry 🐳 
+### 4. Create a Docker Repository in Artifact Registry 🐳
 
 **Repository name**:  
+
 - `challenge-repo-XXXX`
 
 <details>
@@ -63,14 +70,16 @@ _Project ID it will be informed during the session_
   4. <p>Choose <code>Docker</code> as the format</p>
   5. <p>Set the location to <code>us-central1</code></p>
   6. <p>Click "Create"</p>
+
 </details>
 
 ---
 
-### 5. Create 2 Service Accounts (one for the Function and one for EventArc 🧑‍💻 
+### 5. Create 2 Service Accounts (one for the Function and one for EventArc) 🧑‍💻
 
 **SA Names**:  
-- `challenge-webhook-sa-XXXX` _(for the Cloud Function) _
+
+- `challenge-webhook-sa-XXXX` _(for the Cloud Function)_
 - `challenge-trigger-sa-XXXX` _(for the EventArc)_
 
 <details>
@@ -82,6 +91,7 @@ _Project ID it will be informed during the session_
   4. <p>Enter the service account ID</p>
   5. <p>Click "Done"</p>
   6. <p>Repeat the process for the second service account</p>
+
 </details>
 
 ---
@@ -105,6 +115,7 @@ Grant these roles:
   6. <p>Search for the roles mentioned above and select them</p>
   7. <p>Click on "Add another role" for each role</p>
   8. <p>Once all roles are added, click "Save"</p>
+
 </details>
 
 ---
@@ -124,6 +135,7 @@ Grant these roles:
   6. <p>Search for the roles mentioned above and select them</p>
   7. <p>Click on "Add another role" for each role</p>
   8. <p>Once all roles are added, click "Save"</p>
+
 </details>
 
 ---
@@ -146,11 +158,12 @@ Grant the role:
   6. <p>Click "Select a role"</p>
   7. <p>Search for <code>Pub/Sub Publisher</code> and select it</p>
   8. <p>Click "Save"</p>
+
 </details>
 
 ---
 
-### 9. Create BigQuery Dataset and Table 📊 
+### 9. Create BigQuery Dataset and Table 📊
 
 - **Dataset name**: `challenge_dataset_XXXX` _(use underscore `_`, not dash `-`)_
 - **Table name**: `summaries` _(must be exactly this)_
@@ -158,6 +171,7 @@ Grant the role:
 _🧠 Pro Tip: Paste this in "Edit as text" mode for the schema:_
 
 **Schema**:
+
 ```text
 event_id:STRING,
 time_uploaded:TIMESTAMP,
@@ -181,6 +195,7 @@ document_summary:STRING
   9. <p>In the "Schema" section, select "Edit as text"</p>
   10. <p>Paste the schema provided above</p>
   11. <p>Click "Create table"</p>
+
 </details>
 
 ---
@@ -188,6 +203,7 @@ document_summary:STRING
 ### 10. Deploy the Cloud Function (Webhook) ☁️
 
 #### Function Configuration
+
 - **Function name**: `challenge-function-XXXX`
 - **Runtime**: Python 3.12
 - **Trigger**: EventArc
@@ -199,6 +215,7 @@ document_summary:STRING
 - **Service Account**: Use the Trigger Service Account _(⚠️ If prompted to grant Pub/Sub a role — click “Grant”)_
 
 #### Container Configuration
+
 - **Container Service Account**: Inside the Security tab, select the Webhook Service Account you created earlier (`challenge-webhook-sa-XXXX`).
 - **Variables & Secrets**: Add the following environment variables:
 
@@ -234,6 +251,7 @@ document_summary:STRING
   16. <p>Enter the variable name and value as per the table above</p>
   17. <p>Click on "Add variable" for each variable</p>
   18. <p>Once all variables are added, click "Create"</p>
+
 </details>
 
 ---
@@ -254,6 +272,7 @@ Update the `main.py` and `requirements.txt` with the ones here in the repository
   5. Change the "Function entry point" to <code>on_cloud_event</code></p>
   6. <p>Click "Save and redeploy"</p>
   7. Wait for the deployment to finish (it may take a few minutes)</p>
+
 </details>
 
 ---
@@ -306,6 +325,7 @@ The `script/deploy.sh` file is a script that will deploy all the resources neede
   1. <p>Open a terminal</p>
   2. <p>Navigate to the <code>scripts</code> folder in the repository</p>
   3. <p>Run the command <code>bash deploy.sh -h</code> to see the help</p>
+
 </details></p>
 
 The `scripts/delete.sh` file is a script that will delete all the resources created for the challenge. You can use it to delete the resources in a single command.
@@ -316,5 +336,6 @@ The `scripts/delete.sh` file is a script that will delete all the resources crea
   1. <p>Open a terminal</p>
   2. <p>Navigate to the <code>scripts</code> folder in the repository</p>
   3. <p>Run the command <code>bash delete.sh -h</code> to see the help</p>
-  3. <p>Be aware that you must use the file that was generated during the deployment above</p>
+  4. <p>Be aware that you must use the file that was generated during the deployment above</p>
+
 </details>
